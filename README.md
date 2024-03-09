@@ -19,44 +19,12 @@ Note: This is not an official control vendor software of the WMS webcontrol pro 
 
 ## Developer manual
 
-╭───────────────────────────────────────────────────────
-│ dev-server was sucessfully set up in
-│ ioBroker.wms-webcontrol-pro/.dev-server/default.
-│
-│ You may now execute one of the following commands
-│
-│ dev-server run default
-│ dev-server watch default
-│ dev-server debug default
-│
-│ to use dev-server.
-│
-╰──────────────────────────────────────────────────────
+dev-server: ioBroker.wms-webcontrol-pro/.dev-server/default.
+You may now execute one of the following commands:
 
-### Getting started
-
-You are almost done, only a few steps left:
-
-1. Create a new repository on GitHub with the name `ioBroker.wms-webcontrol-pro`
-1. Initialize the current folder as a new git repository:
-    ```bash
-    git init -b main
-    git add .
-    git commit -m "Initial commit"
-    ```
-1. Link your local repository with the one on GitHub:
-
-    ```bash
-    git remote add origin https://github.com/mr-suw/ioBroker.wms-webcontrol-pro
-    ```
-
-1. Push all files to the GitHub repo:
-    ```bash
-    git push origin main
-    ```
-1. Add a new secret under https://github.com/mr-suw/ioBroker.wms-webcontrol-pro/settings/secrets. It must be named `AUTO_MERGE_TOKEN` and contain a personal access token with push access to the repository, e.g. yours. You can create a new token under https://github.com/settings/tokens.
-
-1. Head over to [main.js](main.js) and start programming!
+-   dev-server run default
+-   dev-server watch default
+-   dev-server debug default
 
 ### Best Practices
 
