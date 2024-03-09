@@ -13,7 +13,9 @@
 
 ## wms-webcontrol-pro adapter for ioBroker
 
-Control your vertical blinds over the WMS webcontrol pro in your local area network. No cloud access required. My thanks goes to the developers of the python library from MartijnTuinstra/WaremaWMSApi, which I did migrate to nodejs.
+Control your vertical blinds over the WMS webcontrol pro in your local area network. No cloud access required. Big thank you goes to the developers of the python library from MartijnTuinstra/WaremaWMSApi, which I did migrate to nodejs.
+
+Note: This is not an official control vendor software of the WMS webcontrol pro device.
 
 ## Developer manual
 
