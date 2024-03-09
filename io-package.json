@@ -57,7 +57,7 @@
 		"enabled": true,
 		"extIcon": "https://raw.githubusercontent.com/mr-suw/ioBroker.wms-webcontrol-pro/main/admin/wms-webcontrol-pro.png",
 		"readme": "https://github.com/mr-suw/ioBroker.wms-webcontrol-pro/blob/main/README.md",
-		"loglevel": "info",
+		"loglevel": "debug",
 		"tier": 3,
 		"mode": "daemon",
 		"type": "iot-systems",
@@ -69,7 +69,10 @@
 		},
 		"dependencies": [
 			{
-				"js-controller": ">=3.3.22"
+				"js-controller": ">=3.3.22",
+				"axios": "^1.6.7",
+				"winston": "^3.12.0",
+				"buffer": "^6.0.3"
 			}
 		],
 		"globalDependencies": [
@@ -79,8 +82,8 @@
 		]
 	},
 	"native": {
-		"option1": true,
-		"option2": "42"
+		"optIp": "192.168.10.10",
+		"optPollTime": 10
 	},
 	"objects": [],
 	"instanceObjects": []

@@ -7,6 +7,7 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
+const { AsyncWaremaHub } = require('./lib/WmsApi/asyncHub.js');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -33,6 +34,35 @@ class WmsWebcontrolPro extends utils.Adapter {
 	async onReady() {
 		// Initialize your adapter here
 		this.checkCfg();
+		const hub = new AsyncWaremaHub(this.config.optIp);
+		this.log.info('new WMS web control pro hub device prepared.');
+
+		try {
+			const devices = await hub.getDevices();
+
+			const tasks = [];
+			for (const device of Object.values(devices)) {
+				// Iterate through device values
+				tasks.push(this.position(device));
+			}
+
+			await Promise.all(tasks); // Wait for all tasks to finish
+
+			/*
+			console.log('Set position for Büro Rollladen');
+			const buero = hub.getDeviceFromSerialNumber(1143662);
+			await buero.setPosition(0); // Uncomment to set position
+			console.log('wait 10 seconds');
+			await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 10 seconds
+
+			tasks.push(position(buero));
+			await Promise.all(tasks);
+			*/
+		} catch (error) {
+			this.log.error('Error: ' + error);
+		} finally {
+			await hub.closeSession();
+		}
 
 		/*
 		For every state in the system there has to be also an object of type state
@@ -84,6 +114,15 @@ class WmsWebcontrolPro extends utils.Adapter {
 		if (this.config.optIp == '' || this.config.optPollTime < 3) {
 			this.log.error('IP address not set or polling time below 3 seconds.');
 			this.disable();
+		}
+	}
+
+	async position(device) {
+		try {
+			const status = await device.getPosition();
+			this.log.debug(device.name + ',' + device.SN + ', ' + status);
+		} catch (error) {
+			console.error('Error getting device position:', error);
 		}
 	}
 
