@@ -32,11 +32,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	 */
 	async onReady() {
 		// Initialize your adapter here
-
-		// The adapters config (in the instance object everything under the attribute "native") is accessible via
-		// this.config:
-		this.log.info('config option1: ' + this.config.option1);
-		this.log.info('config option2: ' + this.config.option2);
+		this.checkCfg();
 
 		/*
 		For every state in the system there has to be also an object of type state
@@ -82,6 +78,13 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 		result = await this.checkGroupAsync('admin', 'admin');
 		this.log.info('check group user admin group admin: ' + result);
+	}
+
+	checkCfg() {
+		if (this.config.optIp == '' || this.config.optPollTime < 3) {
+			this.log.error('IP address not set or polling time below 3 seconds.');
+			this.disable();
+		}
 	}
 
 	/**
