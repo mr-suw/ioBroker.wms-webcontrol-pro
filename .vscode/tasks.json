@@ -1,12 +1,48 @@
 {
-	// See https://go.microsoft.com/fwlink/?LinkId=733558
-	// for the documentation about the tasks.json format
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "dev-server debug",
 			"type": "shell",
-			"command": "dev-server debug default --wait"
+			//"script": "devserver:debug", // <-- from package.json <-- scripts: dev-server debug --wait
+			"command": "dev-server debug --wait",
+			"label": "preLaunchTask_startDevServer",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			},
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "^$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "devserver:debug",
+					"endsPattern": "Debugger is now waiting on process id"
+				}
+			}
+		},
+		{
+			"label": "postDebug_KillChoice",
+			"type": "process",
+			"command": [
+				"${command:workbench.action.tasks.terminate}",
+				"${command:workbench.action.acceptSelectedQuickOpenItem}"
+			]
+		},
+		{
+			"label": "postDebug_KillAll",
+			"command": "echo ${input:terminate}",
+			"type": "shell",
+			"problemMatcher": []
+		}
+	],
+	"inputs": [
+		{
+			"id": "terminate",
+			"type": "command",
+			"command": "workbench.action.tasks.terminate",
+			"args": "terminateAll"
 		}
 	]
 }
