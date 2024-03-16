@@ -2,13 +2,6 @@
 
 # ioBroker.wms-webcontrol-pro
 
-[![NPM version](https://img.shields.io/npm/v/iobroker.wms-webcontrol-pro.svg)](https://www.npmjs.com/package/iobroker.wms-webcontrol-pro)
-[![Downloads](https://img.shields.io/npm/dm/iobroker.wms-webcontrol-pro.svg)](https://www.npmjs.com/package/iobroker.wms-webcontrol-pro)
-![Number of Installations](https://iobroker.live/badges/wms-webcontrol-pro-installed.svg)
-![Current version in stable repository](https://iobroker.live/badges/wms-webcontrol-pro-stable.svg)
-
-[![NPM](https://nodei.co/npm/iobroker.wms-webcontrol-pro.png?downloads=true)](https://nodei.co/npm/iobroker.wms-webcontrol-pro/)
-
 **Tests:** ![Test and Release](https://github.com/mr-suw/ioBroker.wms-webcontrol-pro/workflows/Test%20and%20Release/badge.svg)
 
 ## wms-webcontrol-pro adapter for ioBroker
