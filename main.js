@@ -217,7 +217,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 					if (posState != null && posState.val != devPosState.STOPPED) {
 						//device motor seems running due to a position request; checking if stopped
-						if (blindSetEqual) {
+						if (blindSetEqual == true) {
 							this.log.debug('switchting to stopped state because blind cover has reached target pos');
 							await this.setStateAsync(
 								this.name + '.' + this.instance + '.' + d.SN + '.posState',
@@ -249,6 +249,9 @@ class WmsWebcontrolPro extends utils.Adapter {
 						pos.getSetting3Calc(),
 						true,
 					);
+
+					//delay to not harm hub device
+					this.delay(100);
 				} catch (error) {
 					getPosErrCnt = getPosErrCnt + 1;
 					this.log.warn('failed getting device position (error counter is ' + getPosErrCnt + '): ' + error);
