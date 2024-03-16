@@ -1,0 +1,17 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "debug adapter",
+			"skipFiles": ["<node_internals>/**"],
+			"preLaunchTask": "dev-server debug",
+			"program": "${workspaceFolder}/main.js",
+			"sourceMapPathOverrides": {
+				"/Users/kai/ws/proj/iobroker/ioBroker.wms-webcontrol-pro/.dev-server/default/node_modules/iobroker.wms-webcontrol-pro/*": "/Users/kai/ws/proj/iobroker/ioBroker.wms-webcontrol-pro/*",
+				"/Users/kai/ws/proj/iobroker/ioBroker.wms-webcontrol-pro/.dev-server/default/node_modules/human-signals/build/src/*": "/Users/kai/ws/proj/iobroker/ioBroker.wms-webcontrol-pro/*"
+			}
+		}
+	]
+}

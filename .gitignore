@@ -21,6 +21,7 @@ doc/*
 .DS_Store
 iobroker.*.tgz
 Thumbs.db
+.dev-server/
 
 #libs
 lib/WaremaWMSApi_Python/*

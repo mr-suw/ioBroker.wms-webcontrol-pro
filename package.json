@@ -1,6 +1,6 @@
 {
   "name": "iobroker.wms-webcontrol-pro",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "control your vertical blinds over the WMS webcontrol pro in your local area network.",
   "author": {
     "name": "Mr. Süw",

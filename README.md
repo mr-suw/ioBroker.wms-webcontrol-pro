@@ -25,6 +25,9 @@ You may now execute one of the following commands:
 -   dev-server run default
 -   dev-server watch default
 -   dev-server debug default
+-   for better debugging use:
+    a) launch debug adapter from debug menu
+    b) > Debug: Attach to node process: <input process id>
 
 ### Best Practices
 
@@ -79,6 +82,10 @@ The ioBroker.admin interface will then be available at http://localhost:8081/
 Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
 
 ## Changelog
+
+### 0.0.2
+
+-   (Mr. Süw) general blinds tested working
 
 ### 0.0.1
 

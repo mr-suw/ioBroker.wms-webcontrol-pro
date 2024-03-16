@@ -8,6 +8,7 @@
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const { AsyncWaremaHub } = require('./lib/WmsApi/asyncHub.js');
+const { AsyncVenetianBlind } = require('./lib/WmsApi/devices/AsyncDevices.js');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -26,6 +27,11 @@ class WmsWebcontrolPro extends utils.Adapter {
 		// this.on('objectChange', this.onObjectChange.bind(this));
 		// this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
+		this.polling = null;
+		this.devices = null;
+		this.isTxLock = false;
+		this.hub = null;
+		this.getPosErrCnt = 0;
 	}
 
 	/**
@@ -34,80 +40,24 @@ class WmsWebcontrolPro extends utils.Adapter {
 	async onReady() {
 		// Initialize your adapter here
 		this.checkCfg();
-		const hub = new AsyncWaremaHub(this.config.optIp);
-		this.log.info('new WMS web control pro hub device prepared.');
+		this.hub = new AsyncWaremaHub(this.config.optIp);
+
+		this.updateConStates(true);
+		this.log.info('hub device connected.');
 
 		try {
-			const devices = await hub.getDevices();
-
-			const tasks = [];
-			for (const device of Object.values(devices)) {
-				// Iterate through device values
-				tasks.push(this.position(device));
-			}
-
-			await Promise.all(tasks); // Wait for all tasks to finish
-
-			/*
-			console.log('Set position for Büro Rollladen');
-			const buero = hub.getDeviceFromSerialNumber(1143662);
-			await buero.setPosition(0); // Uncomment to set position
-			console.log('wait 10 seconds');
-			await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 10 seconds
-
-			tasks.push(position(buero));
-			await Promise.all(tasks);
-			*/
+			this.devices = await this.hub.getDevices();
+			this.log.debug('wms devices retrieved.');
+			this.updateHubStates(this.hub.getStatus());
+			this.updateDevStates();
+			this.polling = this.setTimeout(() => {
+				this.pollDevPos();
+			}, 2000);
 		} catch (error) {
+			this.updateConStates(false);
 			this.log.error('Error: ' + error);
-		} finally {
-			await hub.closeSession();
+			this.disable();
 		}
-
-		/*
-		For every state in the system there has to be also an object of type state
-		Here a simple template for a boolean variable named "testVariable"
-		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-		*/
-		await this.setObjectNotExistsAsync('testVariable', {
-			type: 'state',
-			common: {
-				name: 'testVariable',
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
-
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		this.subscribeStates('testVariable');
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates('lights.*');
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates('*');
-
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		await this.setStateAsync('testVariable', true);
-
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		await this.setStateAsync('testVariable', { val: true, ack: true });
-
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		await this.setStateAsync('testVariable', { val: true, ack: true, expire: 30 });
-
-		// examples for the checkPassword/checkGroup functions
-		let result = await this.checkPasswordAsync('admin', 'iobroker');
-		this.log.info('check user admin pw iobroker: ' + result);
-
-		result = await this.checkGroupAsync('admin', 'admin');
-		this.log.info('check group user admin group admin: ' + result);
 	}
 
 	checkCfg() {
@@ -117,13 +67,159 @@ class WmsWebcontrolPro extends utils.Adapter {
 		}
 	}
 
-	async position(device) {
-		try {
-			const status = await device.getPosition();
-			this.log.debug(device.name + ',' + device.SN + ', ' + status);
-		} catch (error) {
-			console.error('Error getting device position:', error);
+	async createObj(pathName, name, objType, role, dataType, enableWrite, enableRead) {
+		await this.setObjectNotExistsAsync(pathName, {
+			type: objType,
+			common: {
+				name: name,
+				type: dataType,
+				role: role,
+				read: enableRead,
+				write: enableWrite,
+			},
+			native: {},
+		});
+	}
+
+	async updateConStates(isOnline) {
+		this.log.debug('updating connection info to: ' + isOnline);
+		await this.createObj('info.connected', 'info.connected', 'state', 'indicator', 'boolean', false, true);
+		await this.setStateAsync(this.name + '.' + this.instance + '.info.connected', isOnline, true);
+	}
+
+	async updateHubStates(hubStatus) {
+		this.log.debug('creating adapter objects...');
+		//create states when not existing
+		await this.createObj('hub.serialNumber', 'hub.serialNumber', 'state', 'number', 'number', true, false);
+		await this.createObj('hub.name', 'hub.name', 'state', 'string', 'string', true, false);
+		await this.createObj(
+			'hub.cloudConnectionStatus',
+			'hub.cloudConnectionStatus',
+			'state',
+			'number',
+			'number',
+			true,
+			false,
+		);
+		await this.createObj(
+			'hub.bootloaderVersion',
+			'hub.bootloaderVersion',
+			'state',
+			'string',
+			'string',
+			true,
+			false,
+		);
+		await this.createObj('hub.softwareVersion', 'hub.softwareVersion', 'state', 'string', 'string', true, false);
+		await this.createObj('hub.bootTime', 'hub.bootTime', 'state', 'number', 'number', true, false);
+		await this.createObj('hub.containerVersion', 'hub.containerVersion', 'state', 'string', 'string', true, false);
+		await this.createObj('hub.hostname', 'hub.hostname', 'state', 'string', 'string', true, false);
+		await this.createObj('hub.ipAddress', 'hub.ipAddress', 'state', 'string', 'string', true, false);
+		await this.createObj('hub.netMask', 'hub.netMask', 'state', 'string', 'string', true, false);
+		await this.createObj('hub.isRegistered', 'hub.isRegistered', 'state', 'boolean', 'boolean', true, false);
+		await this.createObj('hub.time', 'hub.time', 'state', 'string', 'string', true, false);
+
+		//update hub objects
+		this.log.info('updating hub device objects...');
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.serialNumber', hubStatus.serialNumber, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.name', hubStatus.name, true);
+		this.setStateAsync(
+			this.name + '.' + this.instance + '.hub.cloudConnectionStatus',
+			hubStatus.cloudConnectionStatus,
+			true,
+		);
+		this.setStateAsync(
+			this.name + '.' + this.instance + '.hub.bootloaderVersion',
+			hubStatus.bootloaderVersion,
+			true,
+		);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.softwareVersion', hubStatus.softwareVersion, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.bootTime', hubStatus.bootTime, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.containerVersion', hubStatus.containerVersion, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.hostname', hubStatus.hostname, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.ipAddress', hubStatus.ipAddress, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.netMask', hubStatus.netMask, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.isRegistered', hubStatus.isRegistered, true);
+		this.setStateAsync(this.name + '.' + this.instance + '.hub.time', hubStatus.time, true);
+	}
+
+	async updateDevStates() {
+		this.log.debug('creating device objects...');
+		for (const d of Object.values(this.devices)) {
+			await this.createObj(d.SN + '.name', d.SN + '.name', 'state', 'string', 'string', true, false);
+			await this.createObj(d.SN + '.channel', d.SN + '.channel', 'state', 'number', 'number', true, false);
+			await this.createObj(d.SN + '.setting0', d.SN + '.setting0', 'state', 'state', 'number', true, true);
+			await this.createObj(d.SN + '.setting1', d.SN + '.setting1', 'state', 'state', 'number', true, true);
+			await this.createObj(d.SN + '.setting2', d.SN + '.setting2', 'state', 'state', 'number', true, true);
+			await this.createObj(d.SN + '.setting3', d.SN + '.setting3', 'state', 'state', 'number', true, true);
+			this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.name', d.name, true);
+			this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.channel', d.getChannel(), true);
+
+			//subscribe to states
+			this.subscribeStates(d.SN + '.setting*');
 		}
+	}
+
+	async pollDevPos() {
+		//clear cylce time
+		if (this.polling) {
+			this.clearTimeout(this.polling);
+			this.polling = null;
+			this.log.debug('polling cycle time cleared.');
+		}
+
+		this.log.debug('polling of device positions started.');
+
+		const prevPostErrCnt = this.getPosErrCnt;
+		let numDev = 0;
+
+		// request new positions
+		if (this.isTxLocked() == false) {
+			for (const d of Object.values(this.getDevices())) {
+				try {
+					const pos = await d.getPosition();
+					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting0', pos.setting0, true);
+					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting1', pos.setting1, true);
+					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting2', pos.setting2, true);
+					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting3', pos.setting3, true);
+					numDev = numDev + 1;
+				} catch (error) {
+					this.getPosErrCnt++;
+					this.log.error(
+						'Failed getting device position (err counter is ' + this.getPosErrCnt + '): ' + error,
+					);
+					//this.restart();
+				}
+			}
+		}
+
+		this.log.debug(
+			'calc error counter: ' + (this.getPosErrCnt - prevPostErrCnt) + ', number polled devices: ' + numDev,
+		);
+		if (this.getPosErrCnt - prevPostErrCnt >= numDev) {
+			// getting all positions failed
+			this.log.error('could not update position several times -> restarting adapter.');
+			this.getPosErrCnt = 0;
+			this.restart();
+		}
+
+		// setup new cycle time
+		this.log.debug(' setting new poll cycle time: ' + this.config.optPollTime * 1000 + 'ms');
+		this.polling = this.setTimeout(() => {
+			this.pollDevPos();
+		}, this.config.optPollTime * 1000);
+	}
+
+	setTxLock(lock) {
+		this.isTxLock = lock;
+	}
+
+	isTxLocked() {
+		return this.isTxLock;
+	}
+
+	getDevices() {
+		return this.devices;
 	}
 
 	/**
@@ -133,10 +229,9 @@ class WmsWebcontrolPro extends utils.Adapter {
 	onUnload(callback) {
 		try {
 			// Here you must clear all timeouts or intervals that may still be active
-			// clearTimeout(timeout1);
-			// clearTimeout(timeout2);
-			// ...
-			// clearInterval(interval1);
+			if (this.polling) {
+				this.clearTimeout(this.polling);
+			}
 
 			callback();
 		} catch (e) {
@@ -166,13 +261,46 @@ class WmsWebcontrolPro extends utils.Adapter {
 	 * @param {string} id
 	 * @param {ioBroker.State | null | undefined} state
 	 */
-	onStateChange(id, state) {
-		if (state) {
+	async onStateChange(id, state) {
+		if (state && state.ack == false) {
 			// The state was changed
-			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-		} else {
-			// The state was deleted
-			this.log.info(`state ${id} deleted`);
+			this.log.debug(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+
+			//find out device sn
+			const idSplitted = id.split('.');
+			const idSetting = idSplitted[idSplitted.length - 1];
+			const idSn = parseInt(idSplitted[idSplitted.length - 2]);
+
+			//error checks:
+			if (!idSetting.startsWith('setting') && state.val == null) {
+				//discard change on not relevant states
+				this.log.debug('not a valid state');
+				return 0;
+			}
+
+			//preperations
+			this.setTxLock(true);
+
+			//process state change:
+			const dev = this.hub?.getDeviceFromSerialNumber(idSn);
+			switch (idSetting) {
+				case 'setting0':
+					dev.setPosition(state.val);
+					break;
+				case 'setting1':
+					if (dev instanceof AsyncVenetianBlind) {
+						const set0 = await this.getStateAsync(
+							this.name + '.' + this.instance + '.' + dev.SN + '.setting0',
+						);
+						dev.setPosition(set0, state.val);
+					}
+					break;
+				default:
+					this.log.debug('discard state change because not supported yet');
+			}
+
+			//cleanup
+			this.setTxLock(false);
 		}
 	}
 
