@@ -292,6 +292,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 			// Here you must clear all timeouts or intervals that may still be active
 			if (this.polling) {
 				this.clearTimeout(this.polling);
+				this.polling = null;
 			}
 
 			callback();
@@ -419,7 +420,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	schedulePollDevPos(t) {
-		if (this.polling != null) {
+		if (this.polling) {
 			this.clearTimeout(this.polling);
 		}
 		this.curPollingTime = t;
