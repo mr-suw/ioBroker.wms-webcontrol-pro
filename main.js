@@ -9,9 +9,11 @@
 const utils = require('@iobroker/adapter-core');
 const { AsyncWaremaHub } = require('./lib/WmsApi/asyncHub.js');
 const { AsyncVenetianBlind } = require('./lib/WmsApi/devices/AsyncDevices.js');
-
-// Load your modules here, e.g.:
-// const fs = require("fs");
+const devPosState = {
+	CLOSING: 0,
+	OPENING: 1,
+	STOPPED: 2,
+};
 
 class WmsWebcontrolPro extends utils.Adapter {
 	/**
@@ -23,6 +25,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 			name: 'wms-webcontrol-pro',
 		});
 		this.on('ready', this.onReady.bind(this));
+		// @ts-ignore
 		this.on('stateChange', this.onStateChange.bind(this));
 		// this.on('objectChange', this.onObjectChange.bind(this));
 		// this.on('message', this.onMessage.bind(this));
@@ -31,7 +34,8 @@ class WmsWebcontrolPro extends utils.Adapter {
 		this.devices = null;
 		this.isTxLock = false;
 		this.hub = null;
-		this.getPosErrCnt = 0;
+		this.fastPollingTime = 10000;
+		this.curPollingTime = 0;
 	}
 
 	/**
@@ -50,13 +54,15 @@ class WmsWebcontrolPro extends utils.Adapter {
 			this.log.debug('wms devices retrieved.');
 			this.updateHubStates(this.hub.getStatus());
 			this.updateDevStates();
-			this.polling = this.setTimeout(() => {
-				this.pollDevPos();
-			}, 2000);
+			this.schedulePollDevPos(2000);
+			this.curPollingTime = this.config.optPollTime * 1000;
 		} catch (error) {
 			this.updateConStates(false);
 			this.log.error('Error: ' + error);
-			this.disable();
+			this.delayRestartMs = 15 * 60 * 1000;
+			this.log.info('restarting adapter in ' + this.delayRestartMs + 'ms');
+			this.delay(this.delayRestartMs);
+			this.restart();
 		}
 	}
 
@@ -144,20 +150,42 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	async updateDevStates() {
-		this.log.debug('creating device objects...');
-		for (const d of Object.values(this.devices)) {
-			await this.createObj(d.SN + '.name', d.SN + '.name', 'state', 'string', 'string', true, false);
-			await this.createObj(d.SN + '.channel', d.SN + '.channel', 'state', 'number', 'number', true, false);
-			await this.createObj(d.SN + '.setting0', d.SN + '.setting0', 'state', 'state', 'number', true, true);
-			await this.createObj(d.SN + '.setting1', d.SN + '.setting1', 'state', 'state', 'number', true, true);
-			await this.createObj(d.SN + '.setting2', d.SN + '.setting2', 'state', 'state', 'number', true, true);
-			await this.createObj(d.SN + '.setting3', d.SN + '.setting3', 'state', 'state', 'number', true, true);
-			this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.name', d.name, true);
-			this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.channel', d.getChannel(), true);
+		const devices = this.getDevices();
 
-			//subscribe to states
-			this.subscribeStates(d.SN + '.setting*');
+		if (devices != null) {
+			this.log.debug('creating device objects...');
+
+			for (const d of Object.values(devices)) {
+				await this.createObj(d.SN + '.name', d.SN + '.name', 'state', 'string', 'string', true, false);
+				await this.createObj(d.SN + '.channel', d.SN + '.channel', 'state', 'number', 'number', true, false);
+				await this.createObj(d.SN + '.setting0', d.SN + '.setting0', 'state', 'state', 'number', true, true);
+				await this.createObj(d.SN + '.setting1', d.SN + '.setting1', 'state', 'state', 'number', true, true);
+				await this.createObj(d.SN + '.setting2', d.SN + '.setting2', 'state', 'state', 'number', true, true);
+				await this.createObj(d.SN + '.setting3', d.SN + '.setting3', 'state', 'state', 'number', true, true);
+				await this.createObj(d.SN + '.posState', d.SN + '.posState', 'state', 'state', 'number', true, false);
+				this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.name', d.name, true);
+				this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.channel', d.getChannel(), true);
+				this.setStateAsync(
+					this.name + '.' + this.instance + '.' + d.SN + '.posState',
+					devPosState.STOPPED,
+					true,
+				);
+
+				//subscribe to states
+				this.subscribeStates(d.SN + '.setting*');
+			}
 		}
+	}
+
+	areBlindSettingsEqual(a, b) {
+		return (
+			a != null &&
+			b != null &&
+			a.getSetting0Calc() == b.getSetting0Calc() &&
+			a.getSetting1Calc() == b.getSetting1Calc() &&
+			a.getSetting2Calc() == b.getSetting2Calc() &&
+			a.getSetting3Calc() == b.getSetting3Calc()
+		);
 	}
 
 	async pollDevPos() {
@@ -169,49 +197,78 @@ class WmsWebcontrolPro extends utils.Adapter {
 		}
 
 		this.log.debug('polling of device positions started.');
-
-		const prevPostErrCnt = this.getPosErrCnt;
-		let numDev = 0;
+		const devices = this.getDevices();
 
 		// request new positions
-		if (this.isTxLocked() == false) {
-			for (const d of Object.values(this.getDevices())) {
+		if (this.isTxLocked() == false && devices != null) {
+			let numDev = 0;
+			let getPosErrCnt = 0;
+
+			for (const d of Object.values(devices)) {
 				try {
-					const pos = await d.getPosition();
-					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting0', pos.setting0, true);
-					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting1', pos.setting1, true);
-					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting2', pos.setting2, true);
-					this.setStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.setting3', pos.setting3, true);
 					numDev = numDev + 1;
-				} catch (error) {
-					this.getPosErrCnt++;
-					this.log.error(
-						'Failed getting device position (err counter is ' + this.getPosErrCnt + '): ' + error,
+					const prevPos = d.getPositionFromRam();
+					const pos = await d.getPosition();
+					const posState = await this.getStateAsync(
+						this.name + '.' + this.instance + '.' + d.SN + '.posState',
 					);
+
+					const blindSetEqual = this.areBlindSettingsEqual(prevPos, pos);
+
+					if (posState != null && posState.val != devPosState.STOPPED) {
+						//device motor seems running due to a position request; checking if stopped
+						if (blindSetEqual) {
+							this.log.debug('switchting to stopped state because blind cover has reached target pos');
+							await this.setStateAsync(
+								this.name + '.' + this.instance + '.' + d.SN + '.posState',
+								devPosState.STOPPED,
+								true,
+							);
+							this.curPollingTime = this.config.optPollTime * 1000;
+							this.log.debug('polling time is now set back to normal: ' + this.curPollingTime + 'ms');
+						}
+					}
+
+					this.setStateAsync(
+						this.name + '.' + this.instance + '.' + d.SN + '.setting0',
+						pos.getSetting0Calc(),
+						true,
+					);
+					this.setStateAsync(
+						this.name + '.' + this.instance + '.' + d.SN + '.setting1',
+						pos.getSetting1Calc(),
+						true,
+					);
+					this.setStateAsync(
+						this.name + '.' + this.instance + '.' + d.SN + '.setting2',
+						pos.getSetting2Calc(),
+						true,
+					);
+					this.setStateAsync(
+						this.name + '.' + this.instance + '.' + d.SN + '.setting3',
+						pos.getSetting3Calc(),
+						true,
+					);
+				} catch (error) {
+					getPosErrCnt = getPosErrCnt + 1;
+					this.log.warn('failed getting device position (error counter is ' + getPosErrCnt + '): ' + error);
 				}
 			}
-		}
 
-		this.log.debug(
-			'calc error counter: ' + (this.getPosErrCnt - prevPostErrCnt) + ', number polled devices: ' + numDev,
-		);
-		if (this.getPosErrCnt - prevPostErrCnt >= numDev) {
-			// getting all positions failed
-			this.log.error('could not update position several times -> restarting adapter.');
-			this.getPosErrCnt = 0;
-			//delay restart by 60 seconds
-			this.delay(60000);
-			this.restart();
+			//failed position updates exceed threshold
+			/*if (getPosErrCnt >= numDev) {
+				// getting all positions failed
+				this.log.error('restarting adapter because failed position update exceed error counter of ' + numDev);
+				//this.restart();
+			}*/
 		}
 
 		// setup new cycle time
-		this.log.debug(' setting new poll cycle time: ' + this.config.optPollTime * 1000 + 'ms');
-		this.polling = this.setTimeout(() => {
-			this.pollDevPos();
-		}, this.config.optPollTime * 1000);
+		this.log.debug('schedule new polling device cycle: ' + this.curPollingTime + 'ms');
+		this.schedulePollDevPos(this.curPollingTime);
 	}
 
-	setTxLock(lock) {
+	setPollLock(lock) {
 		this.isTxLock = lock;
 	}
 
@@ -263,7 +320,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	 * @param {ioBroker.State | null | undefined} state
 	 */
 	async onStateChange(id, state) {
-		if (state && state.ack == false) {
+		if (state && state.ack == false && state.val != null) {
 			// The state was changed
 			this.log.debug(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
 
@@ -279,30 +336,93 @@ class WmsWebcontrolPro extends utils.Adapter {
 				return 0;
 			}
 
-			//preperations
-			this.setTxLock(true);
-
 			//process state change:
 			const dev = this.hub?.getDeviceFromSerialNumber(idSn);
+			const newPos = state.val;
 			switch (idSetting) {
-				case 'setting0':
-					dev.setPosition(state.val);
+				case 'setting0': {
+					const blindStatus = dev.getPositionFromRam();
+					const prevPos = blindStatus.getSetting0Calc();
+
+					if (prevPos != newPos) {
+						//req new position
+						this.setPollLock(true);
+						dev.setPosition(newPos);
+						this.setPollLock(false);
+
+						//monitor and update device direction state
+						this.updDevDirectionState(dev, prevPos, newPos);
+					} else {
+						this.log.debug('discarding user requested setting because it is not different to actual value');
+					}
 					break;
-				case 'setting1':
+				}
+				case 'setting1': {
 					if (dev instanceof AsyncVenetianBlind) {
 						const set0 = await this.getStateAsync(
 							this.name + '.' + this.instance + '.' + dev.SN + '.setting0',
 						);
-						dev.setPosition(set0, state.val);
+
+						//req new position
+						this.setPollLock(true);
+						dev.setPosition(set0, newPos);
+						this.setPollLock(false);
+
+						//todo: monitor and update device direction state for tilt
 					}
 					break;
+				}
 				default:
 					this.log.debug('discard state change because not supported yet');
 			}
 
 			//cleanup
-			this.setTxLock(false);
+			//-
 		}
+	}
+
+	async updDevDirectionState(dev, curPos, newPos) {
+		//update the device direction state once and check for stopped state in devicde polling function
+
+		let isCoverDriving = false;
+
+		if (curPos < newPos) {
+			await this.setStateAsync(
+				this.name + '.' + this.instance + '.' + dev.SN + '.posState',
+				devPosState.CLOSING,
+				true,
+			);
+			isCoverDriving = true;
+		} else if (curPos > newPos) {
+			await this.setStateAsync(
+				this.name + '.' + this.instance + '.' + dev.SN + '.posState',
+				devPosState.OPENING,
+				true,
+			);
+			isCoverDriving = true;
+		} else {
+			//no driving required
+			await this.setStateAsync(
+				this.name + '.' + this.instance + '.' + dev.SN + '.posState',
+				devPosState.STOPPED,
+				true,
+			);
+		}
+
+		if (isCoverDriving) {
+			this.log.debug('schedule new polling device cycle: ' + this.fastPollingTime + 'ms');
+			this.schedulePollDevPos(this.fastPollingTime);
+		}
+	}
+
+	schedulePollDevPos(t) {
+		if (this.polling != null) {
+			this.clearTimeout(this.polling);
+		}
+		this.curPollingTime = t;
+		this.polling = this.setTimeout(() => {
+			this.pollDevPos();
+		}, t);
 	}
 
 	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
