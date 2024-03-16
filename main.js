@@ -188,7 +188,6 @@ class WmsWebcontrolPro extends utils.Adapter {
 					this.log.error(
 						'Failed getting device position (err counter is ' + this.getPosErrCnt + '): ' + error,
 					);
-					//this.restart();
 				}
 			}
 		}
@@ -200,6 +199,8 @@ class WmsWebcontrolPro extends utils.Adapter {
 			// getting all positions failed
 			this.log.error('could not update position several times -> restarting adapter.');
 			this.getPosErrCnt = 0;
+			//delay restart by 60 seconds
+			this.delay(60000);
 			this.restart();
 		}
 
