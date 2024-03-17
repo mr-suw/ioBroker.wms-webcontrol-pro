@@ -32,7 +32,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 		// this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
 		this.pollingAllDev = null;
-		this.pollingTimeAllDev = 60;
+		this.pollingTimeAllDev = 60000;
 		this.pollingSingleDev = null;
 		this.devices = null;
 		this.isTxLock = false;
@@ -56,7 +56,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 			this.log.debug('wms devices retrieved.');
 			this.updateHubStates(this.hub.getStatus());
 			this.updateDevStates();
-			this.schedulePollAllDevPos(2000);
+			this.schedulePollAllDevPos(this.pollingTimeAllDev);
 		} catch (error) {
 			this.updateConStates(false);
 			this.log.error('Error: ' + error);
