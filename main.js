@@ -49,11 +49,11 @@ class WmsWebcontrolPro extends utils.Adapter {
 		this.hub = new AsyncWaremaHub(this.config.optIp);
 
 		this.updateConStates(true);
-		this.log.info('hub device connected.');
+		this.log.info('hub device connected');
 
 		try {
 			this.devices = await this.hub.getDevices();
-			this.log.debug('wms devices retrieved.');
+			this.log.debug('wms devices retrieved');
 			this.updateHubStates(this.hub.getStatus());
 			this.updateDevStates();
 			this.schedulePollAllDevPos(this.pollingTimeAllDev);
@@ -69,7 +69,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 	checkCfg() {
 		if (this.config.optIp == '' || this.config.optPollTime < 3) {
-			this.log.error('IP address not set or polling time below 3 seconds.');
+			this.log.error('IP address not set or polling time below 3 seconds');
 			this.disable();
 		}
 	}
@@ -95,7 +95,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	async updateHubStates(hubStatus) {
-		this.log.debug('creating adapter objects...');
+		this.log.debug('creating adapter objects');
 		//create states when not existing
 		await this.createObj('hub.serialNumber', 'hub.serialNumber', 'state', 'number', 'number', true, false);
 		await this.createObj('hub.name', 'hub.name', 'state', 'string', 'string', true, false);
@@ -127,7 +127,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 		await this.createObj('hub.time', 'hub.time', 'state', 'string', 'string', true, false);
 
 		//update hub objects
-		this.log.info('updating hub device objects...');
+		this.log.info('updating hub device objects');
 		this.setStateAsync(this.name + '.' + this.instance + '.hub.serialNumber', hubStatus.serialNumber, true);
 		this.setStateAsync(this.name + '.' + this.instance + '.hub.name', hubStatus.name, true);
 		this.setStateAsync(
@@ -154,7 +154,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 		const devices = this.getDevices();
 
 		if (devices != null) {
-			this.log.debug('creating device objects...');
+			this.log.debug('creating device objects');
 
 			for (const d of Object.values(devices)) {
 				await this.createObj(d.SN + '.name', d.SN + '.name', 'state', 'string', 'string', true, false);
@@ -238,7 +238,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	async pollAllDevPos() {
-		this.log.debug('polling of device positions started.');
+		this.log.debug('polling of all device positions started');
 		this.clearScheduleAllDevPos();
 
 		const devices = this.getDevices();
@@ -278,7 +278,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 		}
 
 		// setup new cycle time
-		this.log.debug('schedule new polling device cycle: ' + this.pollingTimeAllDev + 'ms');
+		this.log.debug('scheduling next polling device cycle: ' + this.pollingTimeAllDev + 'ms');
 		this.schedulePollAllDevPos(this.pollingTimeAllDev);
 	}
 
