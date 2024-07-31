@@ -14,7 +14,7 @@ const DEV_POS_STATE = {
 	OPENING: 1,
 	STOPPED: 2,
 };
-const FAST_SINGLE_POLLING_TIME = 10000;
+const FAST_SINGLE_POLLING_TIME = 30000;
 
 class WmsWebcontrolPro extends utils.Adapter {
 	/**
@@ -401,7 +401,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	async updDevDirectionState(dev, curPos, newPos) {
-		//update the device direction state once and check for stopped state in devicde polling function
+		//update the device direction state once and check for stopped state in device polling function
 
 		let isCoverDriving = false;
 
