@@ -194,7 +194,12 @@ class WmsWebcontrolPro extends utils.Adapter {
 		const pos = await d.getPosition();
 		const posState = await this.getStateAsync(this.name + '.' + this.instance + '.' + d.SN + '.posState');
 
-		let result = 0; //0: pull and update successful; 1: device position has been stopped
+		let result = 0; //0: pull and update successful; 1: device position has been stopped; -1: error retrieving position
+
+		if (!pos.isValid) {
+			result = -1;
+			return result;
+		}
 
 		const blindSetEqual = this.areBlindSettingsEqual(prevPos, pos);
 
@@ -227,6 +232,8 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 		const resPullDev = await this.pullDevPos(d);
 
+		//no error handling when device has reported an invalid position, yet
+
 		if (0 == resPullDev) {
 			//device updated successfully
 			this.log.debug('single device poll - re-schedule: ' + intervalMs + 'ms');
@@ -249,24 +256,20 @@ class WmsWebcontrolPro extends utils.Adapter {
 			let getPosErrCnt = 0;
 
 			for (const d of Object.values(devices)) {
-				try {
-					numDev = numDev + 1;
+				numDev = numDev + 1;
 
-					await this.pullDevPos(d);
+				const resDevPos = await this.pullDevPos(d);
 
-					//delay to not harm hub device
-					await this.delay(100);
-				} catch (error) {
+				if (resDevPos == -1) {
+					//error fetching new device position
 					getPosErrCnt = getPosErrCnt + 1;
 					this.log.warn(
-						'failed getting position (device: ' +
-							d.name +
-							', error counter: ' +
-							getPosErrCnt +
-							'): ' +
-							error,
+						'failed getting position (device: ' + d.name + ', error counter: ' + getPosErrCnt + ')',
 					);
 				}
+
+				//delay to not harm hub device
+				await this.delay(100);
 			}
 
 			//failed position updates exceed threshold
@@ -363,7 +366,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 					const blindStatus = dev.getPositionFromRam();
 					const prevPos = blindStatus.getSetting0Calc();
 
-					if (prevPos != newPos) {
+					if (!prevPos.isValid() || prevPos != newPos) {
 						//req new position
 						this.setPollLock(true);
 						dev.setPosition(newPos);
