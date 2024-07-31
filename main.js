@@ -232,9 +232,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 		const resPullDev = await this.pullDevPos(d);
 
-		//no error handling when device has reported an invalid position, yet
-
-		if (0 == resPullDev) {
+		if (0 == resPullDev || -1 == resPullDev) {
 			//device updated successfully
 			this.log.debug('single device poll - re-schedule: ' + intervalMs + 'ms');
 			this.schedulePollSingleDevPos(d, intervalMs);
@@ -365,13 +363,13 @@ class WmsWebcontrolPro extends utils.Adapter {
 				case 'setting0': {
 					const blindStatus = dev.getPositionFromRam();
 					let prevPos = -1;
-					if (blindStatus != null) {
+					if (blindStatus != null && !blindStatus.isValid()) {
 						prevPos = blindStatus.getSetting0Calc();
 					} else {
 						this.log.debug('previous device position not available; proceeding with user request');
 					}
 
-					if (!blindStatus.isValid() || prevPos != newPos) {
+					if (prevPos != newPos) {
 						//req new position
 						this.setPollLock(true);
 						dev.setPosition(newPos);
