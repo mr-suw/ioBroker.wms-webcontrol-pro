@@ -14,7 +14,7 @@ const DEV_POS_STATE = {
 	OPENING: 1,
 	STOPPED: 2,
 };
-const FAST_SINGLE_POLLING_TIME = 30000;
+const FAST_SINGLE_POLLING_TIME = 15000;
 
 class WmsWebcontrolPro extends utils.Adapter {
 	/**
@@ -196,7 +196,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 		let result = 0; //0: pull and update successful; 1: device position has been stopped; -1: error retrieving position
 
-		if (!pos.isValid) {
+		if (!pos.isValid()) {
 			result = -1;
 			return result;
 		}
@@ -364,9 +364,14 @@ class WmsWebcontrolPro extends utils.Adapter {
 			switch (idSetting) {
 				case 'setting0': {
 					const blindStatus = dev.getPositionFromRam();
-					const prevPos = blindStatus.getSetting0Calc();
+					let prevPos = -1;
+					if (blindStatus != null) {
+						prevPos = blindStatus.getSetting0Calc();
+					} else {
+						this.log.debug('previous device position not available; proceeding with user request');
+					}
 
-					if (!prevPos.isValid() || prevPos != newPos) {
+					if (!blindStatus.isValid() || prevPos != newPos) {
 						//req new position
 						this.setPollLock(true);
 						dev.setPosition(newPos);
@@ -377,6 +382,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 					} else {
 						this.log.debug('discarding user requested setting because it is not different to actual value');
 					}
+
 					break;
 				}
 				case 'setting1': {
