@@ -320,16 +320,16 @@ class WmsWebcontrolPro extends utils.Adapter {
 		try {
 			// Here you must clear all timeouts or intervals that may still be active
 			if (this.pollingAllDev) {
-				this.clearTimeout(this.pollingAllDev);
+				clearInterval(this.pollingAllDev);
 				this.pollingAllDev = null;
 			}
 			if (this.pollingSingleDev) {
-				this.clearTimeout(this.pollingSingleDev);
+				clearInterval(this.pollingSingleDev);
 				this.pollingSingleDev = null;
 			}
 
 			callback();
-		} catch (e) {
+		} catch {
 			callback();
 		}
 	}

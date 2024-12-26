@@ -10,6 +10,7 @@
 // tslint:disable:no-unused-expression
 
 const { expect } = require('chai');
+require('chai').use(require('chai-as-promised'));
 const { Time, PauseSchedule } = require('./main.js');
 
 describe('PauseSchedule', () => {

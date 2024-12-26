@@ -36,6 +36,7 @@ module.exports = {
 				ignoreRestSiblings: true,
 				argsIgnorePattern: '^_',
 				varsIgnorePattern: '^_',
+				caughtErrorsIgnorePattern: '^_',
 			},
 		],
 		'no-var': 'error',
