@@ -14,7 +14,7 @@
 		},
 		"pausePollingTime": {
 			"type": "text",
-			"label": "pause polling (e.g., 22:00:00 PM)",
+			"label": "pause polling (e.g., 10:00:00 PM)",
 			"newLine": true
 		},
 		"resumePollingTime": {

@@ -27,6 +27,7 @@ module.exports = {
 			sourceType: 'commonjs',
 		},
 	},
+	plugins: [],
 	rules: {
 		indent: ['error', 'tab', { SwitchCase: 1 }],
 		'no-console': 'off',
@@ -43,15 +44,8 @@ module.exports = {
 		'no-trailing-spaces': 'error',
 		'prefer-const': 'error',
 		'no-undef': 'error',
-		'no-unused-expressions': [
-			'error',
-			{
-				allowShortCircuit: true,
-				allowTernary: true,
-				allowTaggedTemplates: true,
-				enforceForJSX: true,
-			},
-		],
+		'no-unused-expressions': 'off',
+		'@typescript-eslint/no-unused-expressions': 'off',
 	},
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };

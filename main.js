@@ -321,11 +321,11 @@ class WmsWebcontrolPro extends utils.Adapter {
 		try {
 			// Here you must clear all timeouts or intervals that may still be active
 			if (this.pollingAllDev) {
-				clearInterval(this.pollingAllDev);
+				this.clearTimeout(this.pollingAllDev);
 				this.pollingAllDev = null;
 			}
 			if (this.pollingSingleDev) {
-				clearInterval(this.pollingSingleDev);
+				this.clearTimeout(this.pollingSingleDev);
 				this.pollingSingleDev = null;
 			}
 
@@ -520,7 +520,6 @@ class Time {
 			throw new Error('Invalid time format. Use HH:MM:SS AM/PM');
 		}
 
-		// eslint-disable-next-line prefer-const, no-unused-vars
 		let [_, hours, minutes, seconds, period] = match;
 		hours = parseInt(hours);
 
