@@ -53,13 +53,5 @@ module.exports = {
 			},
 		],
 	},
-	overrides: [
-		{
-			files: ['*.test.js', 'test/**/*.js'],
-			rules: {
-				'no-unused-expressions': 'off',
-			},
-		},
-	],
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };
