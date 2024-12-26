@@ -49,8 +49,17 @@ module.exports = {
 				allowShortCircuit: true,
 				allowTernary: true,
 				allowTaggedTemplates: true,
+				enforceForJSX: true,
 			},
 		],
 	},
+	overrides: [
+		{
+			files: ['*.test.js', 'test/**/*.js'],
+			rules: {
+				'no-unused-expressions': 'off',
+			},
+		},
+	],
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };
