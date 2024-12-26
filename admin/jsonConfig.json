@@ -11,6 +11,16 @@
 			"type": "number",
 			"label": "Polling [s]",
 			"newLine": true
+		},
+		"pausePollingTime": {
+			"type": "text",
+			"label": "pause polling (e.g., 22:00:00 PM)",
+			"newLine": true
+		},
+		"resumePollingTime": {
+			"type": "text",
+			"label": "resume polling (e.g., 06:00:00 AM)",
+			"newLine": true
 		}
 	}
 }

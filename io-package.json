@@ -1,8 +1,11 @@
 {
 	"common": {
 		"name": "wms-webcontrol-pro",
-		"version": "0.0.2",
+		"version": "0.0.3",
 		"news": {
+			"0.0.3": {
+				"en": "pause scheduler"
+			},
 			"0.0.2": {
 				"en": "general blinds tested working"
 			},
@@ -51,7 +54,7 @@
 		"keywords": ["WMS", "LAN", "blind", "webcontrol"],
 		"licenseInformation": {
 			"type": "free",
-			"license": "GPL-3.0"
+			"license": "LGPL-3.0-only"
 		},
 		"platform": "Javascript/Node.js",
 		"main": "main.js",
@@ -82,7 +85,9 @@
 	},
 	"native": {
 		"optIp": "192.168.10.10",
-		"optPollTime": 10
+		"optPollTime": 10,
+		"pausePollingTime": "22:00:00 PM",
+		"resumePollingTime": "06:00:00 AM"
 	},
 	"objects": [],
 	"instanceObjects": []

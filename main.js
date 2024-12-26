@@ -37,6 +37,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 		this.devices = null;
 		this.isTxLock = false;
 		this.hub = null;
+		this.pauseSchedule = null;
 	}
 
 	/**
@@ -71,6 +72,18 @@ class WmsWebcontrolPro extends utils.Adapter {
 		if (this.config.optIp == '' || this.config.optPollTime < 3) {
 			this.log.error('IP address not set or polling time below 3 seconds');
 			this.disable();
+		}
+		if (this.config.pausePollingTime == '' || this.config.resumePollingTime == '') {
+			this.log.info('Pause and resume times disabled');
+			this.pauseSchedule = new PauseSchedule(null, null);
+		} else {
+			try {
+				const pauseTime = new Time(this.config.pausePollingTime);
+				const resumeTime = new Time(this.config.resumePollingTime);
+				this.pauseSchedule = new PauseSchedule(pauseTime, resumeTime);
+			} catch (err) {
+				this.log.error('Syntax error in given pause or resume time: ' + err.message);
+			}
 		}
 	}
 
@@ -246,36 +259,40 @@ class WmsWebcontrolPro extends utils.Adapter {
 		this.log.debug('polling of all device positions started');
 		this.clearScheduleAllDevPos();
 
-		const devices = this.getDevices();
+		//check pause time
+		if (this.pauseSchedule != null && !this.pauseSchedule.isInPauseTime()) {
+			const devices = this.getDevices();
 
-		// request new positions when allowed
-		if (this.isTxLocked() == false && devices != null) {
-			let numDev = 0;
-			let getPosErrCnt = 0;
+			// check tx locked
+			if (this.isTxLocked() == false && devices != null) {
+				//request new positions
+				let numDev = 0;
+				let getPosErrCnt = 0;
 
-			for (const d of Object.values(devices)) {
-				numDev = numDev + 1;
+				for (const d of Object.values(devices)) {
+					numDev = numDev + 1;
 
-				const resDevPos = await this.pullDevPos(d);
+					const resDevPos = await this.pullDevPos(d);
 
-				if (resDevPos == -1) {
-					//error fetching new device position
-					getPosErrCnt = getPosErrCnt + 1;
-					this.log.warn(
-						'failed getting position (device: ' + d.name + ', error counter: ' + getPosErrCnt + ')',
-					);
+					if (resDevPos == -1) {
+						//error fetching new device position
+						getPosErrCnt = getPosErrCnt + 1;
+						this.log.warn(
+							'failed getting position (device: ' + d.name + ', error counter: ' + getPosErrCnt + ')',
+						);
+					}
+
+					//delay to not harm hub device
+					await this.delay(100);
 				}
 
-				//delay to not harm hub device
-				await this.delay(100);
+				//failed position updates exceed threshold
+				/*if (getPosErrCnt >= numDev) {
+					// getting all positions failed
+					this.log.error('restarting adapter because failed position update exceed error counter of ' + numDev);
+					//this.restart();
+				}*/
 			}
-
-			//failed position updates exceed threshold
-			/*if (getPosErrCnt >= numDev) {
-				// getting all positions failed
-				this.log.error('restarting adapter because failed position update exceed error counter of ' + numDev);
-				//this.restart();
-			}*/
 		}
 
 		// setup new cycle time
@@ -495,12 +512,77 @@ class WmsWebcontrolPro extends utils.Adapter {
 	// }
 }
 
+class Time {
+	constructor(timeStr) {
+		const match = timeStr.match(/^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i);
+		if (!match) {
+			throw new Error('Invalid time format. Use HH:MM:SS AM/PM');
+		}
+
+		// eslint-disable-next-line prefer-const, no-unused-vars
+		let [_, hours, minutes, seconds, period] = match;
+		hours = parseInt(hours);
+
+		if (hours < 1 || hours > 12) {
+			throw new Error('Hours must be between 1 and 12');
+		}
+
+		// Convert to 24-hour format
+		if (period.toUpperCase() === 'PM' && hours !== 12) {
+			hours += 12;
+		} else if (period.toUpperCase() === 'AM' && hours === 12) {
+			hours = 0;
+		}
+
+		this.hours = hours;
+		this.minutes = parseInt(minutes);
+		this.seconds = parseInt(seconds);
+
+		if (this.minutes > 59 || this.seconds > 59) {
+			throw new Error('Minutes and seconds must be between 0 and 59');
+		}
+	}
+
+	toString() {
+		return `${this.hours.toString().padStart(2, '0')}:${this.minutes.toString().padStart(2, '0')}:${this.seconds.toString().padStart(2, '0')}`;
+	}
+}
+
+class PauseSchedule {
+	constructor(pause, resume) {
+		this.pause = pause;
+		this.resume = resume;
+	}
+
+	isInPauseTime(curDateTime = new Date()) {
+		if (this.resume == null || this.pause == null) {
+			return false;
+		} else {
+			const now = curDateTime;
+			const currentMinutes = now.getHours() * 60 + now.getMinutes();
+			const pauseMinutes = this.pause.hours * 60 + this.pause.minutes;
+			const resumeMinutes = this.resume.hours * 60 + this.resume.minutes;
+
+			if (pauseMinutes < resumeMinutes) {
+				// Normal case (e.g. pause 08:00, resume 17:00)
+				return currentMinutes >= pauseMinutes && currentMinutes < resumeMinutes;
+			} else {
+				// Overnight case (e.g. pause 22:00, resume 06:00)
+				return currentMinutes >= pauseMinutes || currentMinutes < resumeMinutes;
+			}
+		}
+	}
+}
+
 if (require.main !== module) {
 	// Export the constructor in compact mode
 	/**
 	 * @param {Partial<utils.AdapterOptions>} [options={}]
 	 */
-	module.exports = (options) => new WmsWebcontrolPro(options);
+	module.exports = {
+		...{ Time, PauseSchedule },
+		...(options) => new WmsWebcontrolPro(options),
+	};
 } else {
 	// otherwise start the instance directly
 	new WmsWebcontrolPro();

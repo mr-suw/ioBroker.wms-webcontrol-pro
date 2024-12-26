@@ -1,5 +1,7 @@
 {
 	"wms-webcontrol-pro adapter settings": "Adaptereinstellungen für wms-webcontrol-pro",
-	"option1": "Option 1",
-	"option2": "Option 2"
+	"optIp": "IP Adresse",
+	"optPollTime": "Aktualisierung in Sekunden",
+	"pausePollingTime": "Uhrzeit im Format 22:00:00 PM wann die Aktualisierung vorübergehend gestoppt wird",
+	"resumePollingTime": "Uhrzeit im Format 06:00:00 AM wann die Aktualisierung wieder fortgesetzt wird"
 }
