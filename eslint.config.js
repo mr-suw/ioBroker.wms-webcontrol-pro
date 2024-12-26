@@ -19,7 +19,7 @@ module.exports = {
 			afterEach: 'readonly',
 		},
 	},
-	extends: ['eslint:recommended'],
+	// Remove extends and include rules directly
 	rules: {
 		indent: [
 			'error',
@@ -48,6 +48,10 @@ module.exports = {
 			},
 		],
 		semi: ['error', 'always'],
+		// Add recommended rules manually
+		'no-undef': 'error',
+		'no-unused-expressions': 'error',
+		'no-irregular-whitespace': 'error',
 	},
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };
