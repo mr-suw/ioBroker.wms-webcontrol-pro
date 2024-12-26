@@ -1,33 +1,31 @@
 module.exports = {
 	languageOptions: {
 		ecmaVersion: 'latest',
+		sourceType: 'commonjs',
 		globals: {
-			// Equivalent to env.es6
-			Promise: 'readonly',
-			Map: 'readonly',
-			Set: 'readonly',
-			// Equivalent to env.node
+			// Node.js globals
+			module: 'writable',
+			require: 'writable',
 			process: 'readonly',
 			__dirname: 'readonly',
 			__filename: 'readonly',
-			// Equivalent to env.mocha
+			Buffer: 'readonly',
+			console: 'readonly',
+			// Mocha globals
 			describe: 'readonly',
 			it: 'readonly',
 			before: 'readonly',
 			after: 'readonly',
 			beforeEach: 'readonly',
 			afterEach: 'readonly',
+			// ES6 globals
+			Promise: 'readonly',
+			Map: 'readonly',
+			Set: 'readonly',
 		},
 	},
-	// Remove extends and include rules directly
 	rules: {
-		indent: [
-			'error',
-			'tab',
-			{
-				SwitchCase: 1,
-			},
-		],
+		indent: ['error', 'tab', { SwitchCase: 1 }],
 		'no-console': 'off',
 		'no-unused-vars': [
 			'error',
@@ -48,9 +46,15 @@ module.exports = {
 			},
 		],
 		semi: ['error', 'always'],
-		// Add recommended rules manually
 		'no-undef': 'error',
-		'no-unused-expressions': 'error',
+		'no-unused-expressions': [
+			'error',
+			{
+				allowShortCircuit: true,
+				allowTernary: true,
+				allowTaggedTemplates: true,
+			},
+		],
 		'no-irregular-whitespace': 'error',
 	},
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
