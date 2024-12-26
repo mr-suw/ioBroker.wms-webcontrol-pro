@@ -257,7 +257,6 @@ class WmsWebcontrolPro extends utils.Adapter {
 	}
 
 	async pollAllDevPos() {
-		this.log.debug('polling of all device positions started');
 		this.clearScheduleAllDevPos();
 
 		//check pause time
@@ -266,6 +265,8 @@ class WmsWebcontrolPro extends utils.Adapter {
 
 			// check tx locked
 			if (this.isTxLocked() == false && devices != null) {
+				this.log.debug('polling of all device positions');
+
 				//request new positions
 				let numDev = 0;
 				let getPosErrCnt = 0;
@@ -293,7 +294,11 @@ class WmsWebcontrolPro extends utils.Adapter {
 					this.log.error('restarting adapter because failed position update exceed error counter of ' + numDev);
 					//this.restart();
 				}*/
+			} else {
+				this.log.debug('discard polling during another transmit');
 			}
+		} else {
+			this.log.debug('discard polling between pause and resume time');
 		}
 
 		// setup new cycle time
