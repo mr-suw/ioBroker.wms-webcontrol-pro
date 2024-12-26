@@ -23,6 +23,9 @@ module.exports = {
 			Map: 'readonly',
 			Set: 'readonly',
 		},
+		parserOptions: {
+			sourceType: 'commonjs',
+		},
 	},
 	rules: {
 		indent: ['error', 'tab', { SwitchCase: 1 }],
@@ -32,20 +35,12 @@ module.exports = {
 			{
 				ignoreRestSiblings: true,
 				argsIgnorePattern: '^_',
+				varsIgnorePattern: '^_',
 			},
 		],
 		'no-var': 'error',
 		'no-trailing-spaces': 'error',
 		'prefer-const': 'error',
-		quotes: [
-			'error',
-			'single',
-			{
-				avoidEscape: true,
-				allowTemplateLiterals: true,
-			},
-		],
-		semi: ['error', 'always'],
 		'no-undef': 'error',
 		'no-unused-expressions': [
 			'error',
@@ -55,7 +50,6 @@ module.exports = {
 				allowTaggedTemplates: true,
 			},
 		],
-		'no-irregular-whitespace': 'error',
 	},
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };
