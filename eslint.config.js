@@ -1,11 +1,25 @@
 module.exports = {
-	env: {
-		es6: true,
-		node: true,
-		mocha: true,
+	languageOptions: {
+		ecmaVersion: 'latest',
+		globals: {
+			// Equivalent to env.es6
+			Promise: 'readonly',
+			Map: 'readonly',
+			Set: 'readonly',
+			// Equivalent to env.node
+			process: 'readonly',
+			__dirname: 'readonly',
+			__filename: 'readonly',
+			// Equivalent to env.mocha
+			describe: 'readonly',
+			it: 'readonly',
+			before: 'readonly',
+			after: 'readonly',
+			beforeEach: 'readonly',
+			afterEach: 'readonly',
+		},
 	},
 	extends: ['eslint:recommended'],
-	plugins: [],
 	rules: {
 		indent: [
 			'error',
@@ -34,9 +48,6 @@ module.exports = {
 			},
 		],
 		semi: ['error', 'always'],
-	},
-	parserOptions: {
-		ecmaVersion: 'latest',
 	},
 	ignores: ['.prettierrc.js', '**/eslintrc.js', 'admin/words.js'],
 };
