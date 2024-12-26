@@ -83,6 +83,7 @@ class WmsWebcontrolPro extends utils.Adapter {
 				this.pauseSchedule = new PauseSchedule(pauseTime, resumeTime);
 			} catch (err) {
 				this.log.error('Syntax error in given pause or resume time: ' + err.message);
+				this.disable();
 			}
 		}
 	}
