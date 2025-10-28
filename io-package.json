@@ -62,7 +62,7 @@
 		"enabled": true,
 		"extIcon": "https://raw.githubusercontent.com/mr-suw/ioBroker.wms-webcontrol-pro/main/admin/wms-webcontrol-pro.png",
 		"readme": "https://github.com/mr-suw/ioBroker.wms-webcontrol-pro/blob/main/README.md",
-		"loglevel": "debug",
+		"loglevel": "warn",
 		"tier": 3,
 		"mode": "daemon",
 		"type": "iot-systems",
